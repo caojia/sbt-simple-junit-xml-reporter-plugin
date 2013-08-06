@@ -30,6 +30,8 @@ class TestGroupXmlWriter(val name: String) {
   var failures: Int = 0
   var tests: Int = 0
   var skipped: Int = 0
+  val start: Long = System.currentTimeMillis
+  def end: Long = System.currentTimeMillis
 
   lazy val hostName = InetAddress.getLocalHost.getHostName
   lazy val testEvents: ListBuffer[TestEvent] = new ListBuffer[TestEvent]
@@ -51,8 +53,10 @@ class TestGroupXmlWriter(val name: String) {
 
   def write(path: String) {
 
+    val duration = (end - start) / 1000.0 // HACK, there's no api exposed about duration by sbt 
+
     val resultXml =
-      <testSuite errors={errors.toString} failures={failures.toString} name={name} tests={tests.toString} time={"0"} timestamp={new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(new Date())}>
+      <testSuite errors={errors.toString} failures={failures.toString} name={name} tests={tests.toString} time={duration.toString} timestamp={new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(new Date())}>
           <properties/>
         {
           for (e <- testEvents; t <- e.detail) yield
