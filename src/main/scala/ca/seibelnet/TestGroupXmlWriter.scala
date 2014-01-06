@@ -55,7 +55,7 @@ class TestGroupXmlWriter(val name: String) {
 
   def write(path: String) {
 
-    val duration = (end - start) / 1000.0 // HACK, there's no api exposed about duration by sbt 
+    val duration = (end - start) / 1000.0 // HACK, there's no api exposed about duration by sbt
 
     val resultXml =
       <testSuite errors={errors.toString} failures={failures.toString} name={name} tests={tests.toString} time={duration.toString} timestamp={new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(new Date())}>
@@ -63,7 +63,7 @@ class TestGroupXmlWriter(val name: String) {
         {
           for (e <- testEvents; d <- e.detail) yield
           {
-            <testcase classname={d.fullyQualifiedName()} name={ d.selector.asInstanceOf[TestSelector].testName } time={ d.duration().toString }>
+            <testcase classname={d.fullyQualifiedName()} name={ d.selector.asInstanceOf[TestSelector].testName } time={ (d.duration() / 1000.0).toString }>
               {
                 d.status() match {
                   case Status.Failure =>
