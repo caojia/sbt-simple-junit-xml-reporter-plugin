@@ -9,6 +9,8 @@ import xml.XML
 import org.scalatools.testing.{Result, Event}
 import java.text.SimpleDateFormat
 
+import sbt.testing.{TestSelector, Status}
+
 /**
  * User: bseibel
  * Date: 12-04-25
@@ -39,12 +41,12 @@ class TestGroupXmlWriter(val name: String) {
 
   def addEvent(testEvent: TestEvent) {
     testEvents += testEvent
-    for (e: Event <- testEvent.detail) {
+    for (e <- testEvent.detail) {
       tests += 1
-      e.result() match {
-        case Result.Failure => failures += 1
-        case Result.Error => errors += 1
-        case Result.Skipped => skipped += 1
+      e.status() match {
+        case Status.Failure => failures += 1
+        case Status.Error => errors += 1
+        case Status.Skipped | Status.Ignored | Status.Pending | Status.Canceled => skipped += 1
         case _ => {}
       }
     }
@@ -59,17 +61,29 @@ class TestGroupXmlWriter(val name: String) {
       <testSuite errors={errors.toString} failures={failures.toString} name={name} tests={tests.toString} time={duration.toString} timestamp={new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(new Date())}>
           <properties/>
         {
-          for (e <- testEvents; t <- e.detail) yield
+          for (e <- testEvents; d <- e.detail) yield
           {
-            <testcase classname={name} name={ t.testName() } time={"0"}>
+            <testcase classname={d.fullyQualifiedName()} name={ d.selector.asInstanceOf[TestSelector].testName } time={ d.duration().toString }>
               {
-                t.result() match {
-                  case Result.Failure =>
-                    <failure message={t.error().getMessage} type={t.error().getClass.getName}>{t.error().getStackTrace.map { e => e.toString }.mkString("\n")}</failure>
-                  case Result.Error =>
-                    <error message={t.error().getMessage} type={t.error().getClass.getName}>{t.error().getStackTrace.map { e => e.toString }.mkString("\n")}</error>
-                  case Result.Skipped =>
+                d.status() match {
+                  case Status.Failure =>
+                    if (d.throwable().isDefined) {
+                      val t = d.throwable().get()
+                      <failure message={t.getMessage} type={t.getClass.getName}>{t.getStackTrace.map { e => e.toString }.mkString("\n")}</failure>
+                    }
+                  case Status.Error =>
+                    if (d.throwable().isDefined) {
+                      val t = d.throwable().get()
+                      <error message={t.getMessage} type={t.getClass.getName}>{t.getStackTrace.map { e => e.toString }.mkString("\n")}</error>
+                    }
+                  case Status.Skipped =>
                     <skipped/>
+                  case Status.Ignored =>
+                    <ignored/>
+                  case Status.Canceled =>
+                    <canceled/>
+                  case Status.Pending =>
+                    <pending/>
                   case _ => {}
                 }
               }
