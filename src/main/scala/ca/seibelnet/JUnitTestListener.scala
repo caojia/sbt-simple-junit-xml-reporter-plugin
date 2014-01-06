@@ -2,6 +2,7 @@ package ca.seibelnet
 
 import sbt._
 import Keys._
+import scala.collection._
 
 /**
  * User: bseibel
@@ -17,29 +18,31 @@ object JUnitTestReporting extends Plugin {
 
 class JUnitTestListener(val targetPath: String) extends TestReportListener {
 
-  var currentOutput: Option[TestGroupXmlWriter] = None
+  val outputFactory: mutable.Map[String, TestGroupXmlWriter] = mutable.Map()
 
   def testEvent(event: TestEvent) {
-      currentOutput.foreach(_.addEvent(event))
+    event.detail.headOption flatMap {ev =>
+      outputFactory.get(ev.fullyQualifiedName())
+    } foreach { _.addEvent(event) }
   }
 
   def endGroup(name: String, result: TestResult.Value) {
-    flushOutput()
+    flushOutput(name)
   }
 
   def endGroup(name: String, t: Throwable) {
-    flushOutput()
+    flushOutput(name)
   }
 
   def startGroup(name: String) {
-    currentOutput = Some(TestGroupXmlWriter(name))
+    outputFactory(name) = TestGroupXmlWriter(name)
   }
 
-  private def flushOutput() {
+  private def flushOutput(name: String) {
     val file = new File(targetPath)
     file.mkdirs()
 
-    currentOutput.foreach(_.write(targetPath))
+    outputFactory.get(name).foreach(_.write(targetPath))
   }
 
 }
